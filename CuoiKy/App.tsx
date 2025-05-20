@@ -104,6 +104,7 @@ function App(): React.JSX.Element {
           </Section>
           <LearnMoreLinks />
         </View>
+        <><Text>Say what</Text></>
       </ScrollView>
     </View>
   );

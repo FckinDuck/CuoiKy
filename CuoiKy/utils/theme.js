@@ -1,4 +1,3 @@
-// src/utils/theme.js
 
 const COLORS = {
   primary: '#FF6B00',

@@ -4,7 +4,7 @@ import HomeScreen from '../screens/HomeScreen';
 import SearchScreen from '../screens/SearchScreen';
 import FavoriteScreen from '../screens/FavoriteScreen';
 import ProfileScreen from '../screens/ProfileScreen';
-import { Ionicons } from 'react-native-vector-icons';
+import  Ionicons  from 'react-native-vector-icons/Ionicons';
 
 const Tab = createBottomTabNavigator();
 

@@ -1,21 +1,15 @@
-// src/screens/ProfileScreen.js
 import React from 'react';
 import { View, Text, StyleSheet, Button } from 'react-native';
 import Avatar from '../components/Avatar';
 import { COLORS, FONT_SIZES, SPACING } from '../utils/theme';
-import { useSelector, useDispatch } from 'react-redux';
-import { logout } from '../redux/slices/authSlice';
-import { signOut } from 'firebase/auth';
-import { auth } from '../config/firebase';
+import { useAuth } from '../providers/AuthProvider';
 
 const ProfileScreen = ({ navigation }) => {
-  const user = useSelector((state) => state.auth.user);
-  const dispatch = useDispatch();
+  const { user, logout } = useAuth(); 
 
   const handleLogout = async () => {
     try {
-      await signOut(auth);
-      dispatch(logout());
+      await logout();
     } catch (err) {
       console.log('Logout error:', err);
     }
@@ -23,7 +17,7 @@ const ProfileScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <Avatar uri={user?.avatar || 'https://picsum.photos/200'} size={80} />
+      <Avatar uri={user?.photoURL || 'https://picsum.photos/200'} size={80} />
       <Text style={styles.name}>{user?.displayName || 'Không rõ tên'}</Text>
       <Text style={styles.email}>{user?.email}</Text>
 

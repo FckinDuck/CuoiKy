@@ -1,37 +1,11 @@
-import {
-  getAuth,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signOut,
-  updateProfile,
-} from 'firebase/auth';
-import {
-  getFirestore,
-  doc,
-  setDoc,
-  getDoc,
-  serverTimestamp,
-  updateDoc,
-} from 'firebase/firestore';
-
-const firebaseConfig = {
-  apiKey: "AIzaSyCcJPjOoDiQfUdfY51XIo14TH3ZPrmGLPg",
-  authDomain: "cuoiky-c8805.firebaseapp.com",
-  projectId: "cuoiky-c8805",
-  storageBucket: "cuoiky-c8805.firebasestorage.app",
-  messagingSenderId: "843870247737",
-  appId: "1:843870247737:android:72efda742ff8c8a13666e8",
-}
-
-
-const auth = getAuth();
-const db = getFirestore();
+import auth from '@react-native-firebase/auth';
+import firestore from '@react-native-firebase/firestore';
 
 export const registerUser = async (email, password, displayName) => {
-  const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+  const userCredential = await auth().createUserWithEmailAndPassword(email, password);
   const user = userCredential.user;
 
-  await updateProfile(user, {
+  await user.updateProfile({
     displayName,
     photoURL: 'https://picsum.photos/200',
   });
@@ -40,8 +14,8 @@ export const registerUser = async (email, password, displayName) => {
     email: user.email,
     displayName,
     avatar: 'https://picsum.photos/200',
-    createdAt: serverTimestamp(),
-    lastLogin: serverTimestamp(),
+    createdAt: firestore.FieldValue.serverTimestamp(),
+    lastLogin: firestore.FieldValue.serverTimestamp(),
     theme: 'light',
     language: 'vi',
     notifications: true,
@@ -49,19 +23,17 @@ export const registerUser = async (email, password, displayName) => {
     isBanned: false,
   };
 
-  await setDoc(doc(db, 'USERS', user.uid), userData);
-  return { ...userData, uid: user.uid }; 
+  await firestore().collection('USERS').doc(user.uid).set(userData);
+  return { ...userData, uid: user.uid };
 };
 
-
 export const loginUser = async (email, password) => {
-  const userCredential = await signInWithEmailAndPassword(auth, email, password);
+  const userCredential = await auth().signInWithEmailAndPassword(email, password);
   const user = userCredential.user;
 
-  const userRef = doc(db, 'USERS', user.uid);
-  const userDoc = await getDoc(userRef);
+  const userDoc = await firestore().collection('USERS').doc(user.uid).get();
 
-  if (!userDoc.exists()) {
+  if (!userDoc.exists) {
     throw new Error('Không tìm thấy thông tin người dùng.');
   }
 
@@ -71,11 +43,13 @@ export const loginUser = async (email, password) => {
     throw new Error('Tài khoản đã bị khóa.');
   }
 
-  await updateDoc(userRef, { lastLogin: serverTimestamp() });
+  await firestore().collection('USERS').doc(user.uid).update({
+    lastLogin: firestore.FieldValue.serverTimestamp(),
+  });
 
-  return { ...userData, uid: user.uid }; 
+  return { ...userData, uid: user.uid };
 };
 
 export const logoutUser = async () => {
-  await signOut(auth);
+  await auth().signOut();
 };

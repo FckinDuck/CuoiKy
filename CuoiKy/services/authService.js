@@ -13,7 +13,6 @@ import {
   serverTimestamp,
   updateDoc,
 } from 'firebase/firestore';
-import { initializeApp } from "firebase/app";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCcJPjOoDiQfUdfY51XIo14TH3ZPrmGLPg",
@@ -23,7 +22,8 @@ const firebaseConfig = {
   messagingSenderId: "843870247737",
   appId: "1:843870247737:android:72efda742ff8c8a13666e8",
 }
-const app = initializeApp(firebaseConfig);
+
+
 const auth = getAuth();
 const db = getFirestore();
 

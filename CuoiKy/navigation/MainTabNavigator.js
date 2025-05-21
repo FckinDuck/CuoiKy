@@ -5,9 +5,44 @@ import SearchScreen from '../screens/SearchScreen';
 import FavoriteScreen from '../screens/FavoriteScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import  Ionicons  from 'react-native-vector-icons/Ionicons';
+import DetailScreen from '../screens/DetailScreen';
+import SettingScreen from '../screens/SettingScreen';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 const Tab = createBottomTabNavigator();
-
+const Stack = createNativeStackNavigator();
+function ProfileStack() {
+  return (
+    <Stack.Navigator>
+      <Stack.Screen name="Profile" component={ProfileScreen} />
+      <Stack.Screen name="Setting" component={SettingScreen} />
+    </Stack.Navigator>
+  );
+}
+function HomeStack() {
+  return (
+    <Stack.Navigator>
+      <Stack.Screen name="Home" component={HomeScreen} />
+      <Stack.Screen name="Detail" component={DetailScreen} />
+    </Stack.Navigator>
+  );
+}
+function SearchStack() {
+  return (
+    <Stack.Navigator>
+      <Stack.Screen name="Search" component={SearchScreen} />
+      <Stack.Screen name="Detail" component={DetailScreen} />
+    </Stack.Navigator>
+  );
+}
+function FavoriteStack() {
+  return (
+    <Stack.Navigator>
+      <Stack.Screen name="Favorite" component={FavoriteScreen} />
+      <Stack.Screen name="Detail" component={DetailScreen} />
+    </Stack.Navigator>
+  );
+}
 const MainTabNavigator = () => (
   <Tab.Navigator
     screenOptions={({ route }) => ({
@@ -26,10 +61,10 @@ const MainTabNavigator = () => (
       tabBarInactiveTintColor: 'gray',
     })}
   >
-    <Tab.Screen name="Home" component={HomeScreen} />
-    <Tab.Screen name="Search" component={SearchScreen} />
-    <Tab.Screen name="Favorite" component={FavoriteScreen} />
-    <Tab.Screen name="Profile" component={ProfileScreen} />
+    <Tab.Screen name="Home" component={HomeStack} />
+    <Tab.Screen name="Search" component={SearchStack} />
+    <Tab.Screen name="Favorite" component={FavoriteStack} />
+    <Tab.Screen name="Profile" component={ProfileStack} />
   </Tab.Navigator>
 );
 

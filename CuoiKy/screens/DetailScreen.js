@@ -26,7 +26,7 @@ const DetailScreen = ({ route }) => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  image: { width: '100%', height: 240 },
+  image: { width: '100%', height: 240, boderRadius: 80 },
   info: { padding: SPACING.md },
   title: { fontSize: FONT_SIZES.xl, fontWeight: 'bold' },
   subtitle: { fontSize: FONT_SIZES.medium, color: COLORS.subText },

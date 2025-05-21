@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, TextInput, Button, StyleSheet, Text, Alert } from 'react-native';
+import { View, TextInput, Button, StyleSheet, Text, Alert, ActivityIndicator } from 'react-native';
 import { useAuth } from '../providers/AuthProvider';
 
 const RegisterScreen = ({ navigation }) => {
@@ -8,6 +8,7 @@ const RegisterScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleRegister = async () => {
     if (!email || !password || !displayName) {
@@ -15,10 +16,18 @@ const RegisterScreen = ({ navigation }) => {
       return;
     }
 
+    setLoading(true);
     try {
       await register(email, password, displayName);
-      Alert.alert('Thành công', 'Tạo tài khoản thành công');
+      setLoading(false);
+      Alert.alert('Thành công', 'Tạo tài khoản thành công', [
+        {
+          text: 'OK',
+          onPress: () => navigation.navigate('Login'),
+        },
+      ]);
     } catch (err) {
+      setLoading(false);
       Alert.alert('Lỗi đăng ký', err.message);
     }
   };
@@ -31,12 +40,14 @@ const RegisterScreen = ({ navigation }) => {
         style={styles.input}
         onChangeText={setDisplayName}
         value={displayName}
+        autoCapitalize="words"
       />
       <TextInput
         placeholder="Email"
         style={styles.input}
         onChangeText={setEmail}
         autoCapitalize="none"
+        keyboardType="email-address"
         value={email}
       />
       <TextInput
@@ -46,7 +57,11 @@ const RegisterScreen = ({ navigation }) => {
         secureTextEntry
         value={password}
       />
-      <Button title="Tạo tài khoản" onPress={handleRegister} />
+      {loading ? (
+        <ActivityIndicator size="large" color="#0000ff" style={{ marginVertical: 12 }} />
+      ) : (
+        <Button title="Tạo tài khoản" onPress={handleRegister} />
+      )}
       <Text style={styles.link} onPress={() => navigation.navigate('Login')}>
         Đã có tài khoản? Đăng nhập
       </Text>
@@ -58,9 +73,10 @@ export default RegisterScreen;
 
 const styles = StyleSheet.create({
   container: { padding: 20, flex: 1, justifyContent: 'center' },
-  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 20 },
+  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 20, textAlign: 'center' },
   input: {
     borderBottomWidth: 1,
+    borderBottomColor: '#ccc',
     marginBottom: 15,
     paddingVertical: 8,
     fontSize: 16,

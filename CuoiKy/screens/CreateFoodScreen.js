@@ -1,12 +1,19 @@
 import React, { useState } from 'react';
 import {
-  View, Text, TextInput, Button, Image, ScrollView, StyleSheet, Alert
+  View,
+  Text,
+  TextInput,
+  Button,
+  StyleSheet,
+  Alert,
+  Image,
+  ScrollView,
 } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
-import { firebase,database } from '@react-native-firebase/database';
-import { v4 as uuidv4 } from 'uuid';
+import uuid from 'react-native-uuid';
+import firestore from '@react-native-firebase/firestore';
 import { useAuth } from '../providers/AuthProvider';
-import { COLORS } from '../utils/theme';
+import { encode as btoa } from 'base-64';
 
 const CreateFoodScreen = ({ navigation }) => {
   const { user } = useAuth();
@@ -17,120 +24,106 @@ const CreateFoodScreen = ({ navigation }) => {
   const [price, setPrice] = useState('');
   const [imageUri, setImageUri] = useState(null);
 
-  const handlePickImage = () => {
-    launchImageLibrary({ mediaType: 'photo' }, (response) => {
-      if (!response.didCancel && !response.errorCode) {
-        const uri = response.assets[0].uri;
-        setImageUri(uri);
-      }
-    });
+  const pickImage = async () => {
+    const result = await launchImageLibrary({ mediaType: 'photo' });
+    if (!result.didCancel && result.assets?.length > 0) {
+      setImageUri(result.assets[0].uri);
+    }
   };
 
-  const handleCreateFood = async () => {
+  const handleSubmit = async () => {
     if (!name || !category || !description || !price || !imageUri) {
-      Alert.alert('Lỗi', 'Vui lòng nhập đầy đủ thông tin');
+      Alert.alert('Lỗi', 'Vui lòng điền đầy đủ thông tin món ăn');
       return;
     }
 
-    const id = `food_${uuidv4()}`;
-    const createdAt = new Date().toISOString();
-
-    const newFood = {
-      id,
-      name,
-      category,
-      description,
-      image: imageUri,
-      price: parseInt(price),
-      rating: 0,
-      fame: 0,
-      shareCount: 0,
-      commentCount: 0,
-      createdAt,
-      updatedAt: createdAt,
-      restaurants: [],
-      authorId: user?.uid,
-      isReported: false,
-    };
-
     try {
-      await database().ref(`foods/${id}`).set(newFood);
-      Alert.alert('Thành công', 'Món ăn đã được đăng');
+      const timestamp = Date.now();
+      const encodedName = btoa(name);
+      const userId = user?.uid || 'unknown';
+      const docId = `${userId}_${encodedName}_${timestamp}`;
+
+      const newFood = {
+        id: docId,
+        name,
+        category,
+        description,
+        image: imageUri,
+        price: parseFloat(price),
+        rating: 0,
+        fame: 0,
+        shareCount: 0,
+        commentCount: 0,
+        createdAt: firestore.FieldValue.serverTimestamp(),
+        updatedAt: firestore.FieldValue.serverTimestamp(),
+        tags: [],
+        restaurants: [],
+        authorId: userId,
+        isReported: false,
+        likedBy: [""],
+        dislikedBy: [""],
+      };
+
+      await firestore().collection('FOODS').doc(docId).set(newFood);
+
+      Alert.alert('Thành công', 'Món ăn đã được đăng tải');
       navigation.goBack();
     } catch (err) {
-      Alert.alert('Lỗi', 'Không thể tạo món ăn: ' + err.message);
+      console.error('Firestore error:', err);
+      Alert.alert('Lỗi', err.message);
     }
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Tạo món ăn</Text>
+    <ScrollView style={styles.container}>
+      <Text style={styles.label}>Tên món</Text>
+      <TextInput style={styles.input} value={name} onChangeText={setName} />
 
+      <Text style={styles.label}>Loại món</Text>
+      <TextInput style={styles.input} value={category} onChangeText={setCategory} />
+
+      <Text style={styles.label}>Mô tả</Text>
       <TextInput
         style={styles.input}
-        placeholder="Tên món"
-        value={name}
-        onChangeText={setName}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Loại món (ví dụ: Món nước)"
-        value={category}
-        onChangeText={setCategory}
-      />
-      <TextInput
-        style={[styles.input, { height: 100 }]}
-        placeholder="Mô tả"
-        multiline
         value={description}
         onChangeText={setDescription}
+        multiline
       />
+
+      <Text style={styles.label}>Giá (VNĐ)</Text>
       <TextInput
         style={styles.input}
-        placeholder="Giá"
-        keyboardType="numeric"
         value={price}
         onChangeText={setPrice}
+        keyboardType="numeric"
       />
 
-      <Text style={styles.label}>Chọn ảnh:</Text>
-      {imageUri && <Image source={{ uri: imageUri }} style={styles.image} />}
-      <Button title="Chọn ảnh" onPress={handlePickImage} />
+      <Button title="Chọn ảnh" onPress={pickImage} />
+      {imageUri && (
+        <Image source={{ uri: imageUri }} style={styles.imagePreview} />
+      )}
 
-      <Button title="Đăng món ăn" onPress={handleCreateFood} color={COLORS.primary} />
+      <Button title="Đăng món" onPress={handleSubmit} />
     </ScrollView>
   );
 };
 
-export default CreateFoodScreen;
-
 const styles = StyleSheet.create({
-  container: {
-    padding: 20,
-    backgroundColor: COLORS.background,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
+  container: { padding: 16 },
+  label: { marginBottom: 4, fontWeight: 'bold' },
   input: {
     borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 8,
-    padding: 10,
+    borderColor: '#ccc',
+    padding: 8,
     marginBottom: 12,
-    backgroundColor: COLORS.surface,
+    borderRadius: 6,
   },
-  image: {
+  imagePreview: {
     width: '100%',
-    height: 180,
+    height: 200,
+    marginVertical: 12,
     borderRadius: 8,
-    marginBottom: 12,
-  },
-  label: {
-    fontWeight: 'bold',
-    marginBottom: 4,
   },
 });
+
+export default CreateFoodScreen;

@@ -68,3 +68,31 @@ export const handleDislike = async ({ user, role, food }) => {
     }
   });
 };
+
+export const handleFavorite = async ({ user, food, isFavorite }) => {
+  const userId = btoa(user?.email || '');
+  const favDocRef = firestore().collection('FAVORITE').doc(userId);
+
+  try {
+    const favDoc = await favDocRef.get();
+    const currentList = favDoc.exists ? favDoc.data().foodIdList || [] : [];
+
+    const index = currentList.findIndex(item => item.foodId === food.id);
+    let updatedFoodIdList = [];
+
+    if (isFavorite && index !== -1) {
+    
+      updatedFoodIdList = currentList.filter(item => item.foodId !== food.id);
+    } else if (!isFavorite && index === -1) {
+      
+      updatedFoodIdList = [...currentList, { foodId: food.id }];
+    } else {
+      
+      updatedFoodIdList = currentList;
+    }
+
+    await favDocRef.set({ foodIdList: updatedFoodIdList }, { merge: true });
+  } catch (error) {
+    console.error('handleFavorite error:', error);
+  }
+};

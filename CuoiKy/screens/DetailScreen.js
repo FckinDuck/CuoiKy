@@ -1,20 +1,17 @@
 import React, { useEffect, useLayoutEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  Image,
-  ScrollView,
-  ActivityIndicator,
-  TouchableOpacity,
-  Alert,
+  View, Text, StyleSheet, Image, ScrollView,
+  ActivityIndicator, TouchableOpacity, Alert
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import firestore from '@react-native-firebase/firestore';
 import { useAuth } from '../providers/AuthProvider';
 import { canEditFood } from '../utils/permissions';
+import CommentInput from '../components/CommentInput';
+import CommentSection from '../components/Comment';
 import { COLORS, FONT_SIZES, SPACING } from '../utils/theme';
 import { encode as btoa } from 'base-64';
+import { handleLike as likeFood, handleDislike as dislikeFood, handleFavorite } from '../utils/likeUtils';
 
 const DetailScreen = ({ route, navigation }) => {
   const { user } = useAuth();
@@ -25,9 +22,11 @@ const DetailScreen = ({ route, navigation }) => {
   const [likeStatus, setLikeStatus] = useState(null);
   const [commentCount, setCommentCount] = useState(0);
   const [fame, setFame] = useState(0);
+  const [isFavorite, setIsFavorite] = useState(false);
 
   const userId = btoa(user?.email || '');
   const foodRef = firestore().collection('FOODS').doc(foodId);
+  const favoriteRef = firestore().collection('FAVORITE').doc(userId);
 
   useEffect(() => {
     const fetchFood = async () => {
@@ -57,14 +56,26 @@ const DetailScreen = ({ route, navigation }) => {
         const data = doc.data();
         setFame(data.fame || 0);
         setCommentCount(data.commentCount || 0);
+        setFood(prev => ({ ...prev, ...data }));
+      }
+    });
+
+    const unsubscribeFavorite = favoriteRef.onSnapshot(doc => {
+      if (doc.exists) {
+        const list = doc.data().foodIdList || [];
+        const found = list.some(item => item.foodId === foodId);
+        setIsFavorite(found);
+      } else {
+        setIsFavorite(false);
       }
     });
 
     return () => {
       unsubscribeLike();
       unsubFood();
+      unsubscribeFavorite();
     };
-  }, [foodId]);
+  }, [foodId, userId]);
 
   useLayoutEffect(() => {
     if (food && canEditFood(user, food)) {
@@ -81,43 +92,37 @@ const DetailScreen = ({ route, navigation }) => {
     }
   }, [navigation, food, user]);
 
-  const handleLike = async () => {
-    const likeDoc = foodRef.collection('likes').doc(userId);
-    const current = likeStatus;
-
-    if (current === 'like') {
-      await likeDoc.delete();
-      await foodRef.update({ fame: fame - 1 });
-      setFame(fame - 1);
-    } else {
-      await likeDoc.set({ type: 'like' });
-      const fameChange = current === 'dislike' ? 2 : 1;
-      await foodRef.update({ fame: fame + fameChange });
-      setFame(fame + fameChange);
+  // Ẩn TabBar
+  useLayoutEffect(() => {
+    const parent = navigation.getParent?.();
+    if (parent) {
+      parent.setOptions({ tabBarStyle: { display: 'none' } });
     }
+
+    return () => {
+      if (parent) {
+        parent.setOptions({ tabBarStyle: undefined });
+      }
+    };
+  }, [navigation]);
+
+  const onLike = async () => {
+    await likeFood({ user, role: user.role, food });
   };
 
-  const handleDislike = async () => {
-    const likeDoc = foodRef.collection('likes').doc(userId);
-    const current = likeStatus;
+  const onDislike = async () => {
+    await dislikeFood({ user, role: user.role, food });
+  };
 
-    if (current === 'dislike') {
-      await likeDoc.delete();
-      await foodRef.update({ fame: fame + 1 });
-      setFame(fame + 1);
-    } else {
-      await likeDoc.set({ type: 'dislike' });
-      const fameChange = current === 'like' ? -2 : -1;
-      await foodRef.update({ fame: fame + fameChange });
-      setFame(fame + fameChange);
-    }
+  const onToggleFavorite = async () => {
+    await handleFavorite({ user, food, isFavorite });
   };
 
   const handleShare = async () => {
     try {
       const newCount = (food.shareCount || 0) + 1;
       await foodRef.update({ shareCount: newCount });
-      setFood({ ...food, shareCount: newCount });
+      setFood(prev => ({ ...prev, shareCount: newCount }));
       Alert.alert('Đã chia sẻ', 'Bạn đã chia sẻ món ăn này.');
     } catch (err) {
       console.error('Share error:', err);
@@ -133,51 +138,77 @@ const DetailScreen = ({ route, navigation }) => {
   }
 
   return (
-    <ScrollView style={styles.container}>
-      <Image source={{ uri: food.image }} style={styles.image} />
-      <View style={styles.info}>
-        <Text style={styles.title}>{food.name}</Text>
-        <Text style={styles.subtitle}>Giá: {food.price?.toLocaleString()} VNĐ</Text>
-        <Text style={styles.subtitle}>Loại: {food.category}</Text>
-        <Text style={styles.description}>{food.description}</Text>
+    <View style={{ flex: 1, backgroundColor: COLORS.background }}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 100 }} style={styles.container}>
+        <Image source={{ uri: food.image }} style={styles.image} />
 
-        <View style={styles.actions}>
-          <TouchableOpacity onPress={handleLike} style={styles.actionBtn}>
-            <Icon
-              name="thumb-up-outline"
-              size={22}
-              color={likeStatus === 'like' ? COLORS.primary : COLORS.subText}
-            />
-            <Text style={styles.actionText}>{fame}</Text>
-          </TouchableOpacity>
+        <View style={styles.info}>
+          <View style={styles.headerRow}>
+            <Text style={styles.title}>{food.name}</Text>
+            <TouchableOpacity onPress={onToggleFavorite}>
+              <Icon
+                name={isFavorite ? 'heart' : 'heart-outline'}
+                size={26}
+                color={isFavorite ? COLORS.primary : COLORS.subText}
+              />
+            </TouchableOpacity>
+          </View>
 
-          <TouchableOpacity onPress={handleDislike} style={styles.actionBtn}>
-            <Icon
-              name="thumb-down-outline"
-              size={22}
-              color={likeStatus === 'dislike' ? COLORS.error : COLORS.subText}
-            />
-          </TouchableOpacity>
+          <Text style={styles.subtitle}>Giá: {food.price?.toLocaleString()} VNĐ</Text>
+          <Text style={styles.subtitle}>Loại: {food.category}</Text>
+          <Text style={styles.description}>{food.description}</Text>
 
-          <TouchableOpacity style={styles.actionBtn}>
-            <Icon name="comment-outline" size={22} color={COLORS.subText} />
-            <Text style={styles.actionText}>{commentCount}</Text>
-          </TouchableOpacity>
+          <View style={styles.actions}>
+            <TouchableOpacity onPress={onLike} style={styles.actionBtn}>
+              <Icon
+                name="thumb-up-outline"
+                size={22}
+                color={likeStatus === 'like' ? COLORS.primary : COLORS.subText}
+              />
+              <Text style={styles.actionText}>{fame}</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity onPress={handleShare} style={styles.actionBtn}>
-            <Icon name="share-outline" size={22} color={COLORS.subText} />
-            <Text style={styles.actionText}>{food.shareCount || 0}</Text>
-          </TouchableOpacity>
+            <TouchableOpacity onPress={onDislike} style={styles.actionBtn}>
+              <Icon
+                name="thumb-down-outline"
+                size={22}
+                color={likeStatus === 'dislike' ? COLORS.error : COLORS.subText}
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.actionBtn}>
+              <Icon name="comment-outline" size={22} color={COLORS.subText} />
+              <Text style={styles.actionText}>{commentCount}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={handleShare} style={styles.actionBtn}>
+              <Icon name="share-outline" size={22} color={COLORS.subText} />
+              <Text style={styles.actionText}>{food.shareCount || 0}</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
-    </ScrollView>
+
+        <View style={styles.commentSection}>
+          <CommentSection foodId={foodId}/>
+        </View>
+      </ScrollView>
+
+      {/* Nằm sát dưới cùng màn hình */}
+      <CommentInput foodId={food.id} />
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
-  image: { width: '100%', height: 240, borderRadius: 12 },
+  container: { flex: 1 },
+  image: { width: '100%', height: 240 },
   info: { padding: SPACING.md },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
   title: { fontSize: FONT_SIZES.xl, fontWeight: 'bold' },
   subtitle: { fontSize: FONT_SIZES.medium, color: COLORS.subText, marginTop: 4 },
   description: { fontSize: FONT_SIZES.medium, marginTop: SPACING.sm },
@@ -187,7 +218,7 @@ const styles = StyleSheet.create({
     marginTop: SPACING.lg,
     paddingVertical: 12,
     borderTopWidth: 1,
-    borderColor: COLORS.border || '#ccc',
+    borderColor: COLORS.border,
   },
   actionBtn: {
     flexDirection: 'row',
@@ -197,6 +228,13 @@ const styles = StyleSheet.create({
   actionText: {
     fontSize: FONT_SIZES.small,
     color: COLORS.subText,
+  },
+  commentSection: {
+    paddingHorizontal: SPACING.md,
+    paddingBottom: SPACING.xl,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    marginTop: SPACING.lg,
   },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 });

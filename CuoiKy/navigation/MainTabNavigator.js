@@ -45,7 +45,7 @@ function FavoriteStack() {
   return (
     <Stack.Navigator>
       <Stack.Screen name="Favorite" component={FavoriteScreen} />
-      <Stack.Screen name="Detail" component={DetailScreen} />
+      <Stack.Screen name="Detail" component={DetailScreen}  />
       <Stack.Screen name="EditFood" component={EditFoodScreen} options={{ title: 'Chỉnh sửa món' }} />
     </Stack.Navigator>
   );

@@ -1,9 +1,19 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, Alert, Image, ScrollView } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  Button,
+  StyleSheet,
+  Alert,
+  Image,
+  ScrollView,
+} from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
 import uuid from 'react-native-uuid';
-import firestore from '@react-native-firebase/firestore'; // 👉 Dùng Firestore
+import firestore from '@react-native-firebase/firestore';
 import { useAuth } from '../providers/AuthProvider';
+import { encode as btoa } from 'base-64';
 
 const CreateFoodScreen = ({ navigation }) => {
   const { user } = useAuth();
@@ -28,8 +38,13 @@ const CreateFoodScreen = ({ navigation }) => {
     }
 
     try {
+      const timestamp = Date.now();
+      const encodedName = btoa(name);
+      const userId = user?.uid || 'unknown';
+      const docId = `${userId}_${encodedName}_${timestamp}`;
+
       const newFood = {
-        id: `food_${uuid.v4()}`,
+        id: docId,
         name,
         category,
         description,
@@ -43,13 +58,13 @@ const CreateFoodScreen = ({ navigation }) => {
         updatedAt: firestore.FieldValue.serverTimestamp(),
         tags: [],
         restaurants: [],
-        authorId: user?.uid || 'unknown',
+        authorId: userId,
         isReported: false,
+        likedBy: [""],
+        dislikedBy: [""],
       };
 
-      await firestore()
-        .collection('FOODS')
-        .add(newFood);
+      await firestore().collection('FOODS').doc(docId).set(newFood);
 
       Alert.alert('Thành công', 'Món ăn đã được đăng tải');
       navigation.goBack();
@@ -68,13 +83,25 @@ const CreateFoodScreen = ({ navigation }) => {
       <TextInput style={styles.input} value={category} onChangeText={setCategory} />
 
       <Text style={styles.label}>Mô tả</Text>
-      <TextInput style={styles.input} value={description} onChangeText={setDescription} multiline />
+      <TextInput
+        style={styles.input}
+        value={description}
+        onChangeText={setDescription}
+        multiline
+      />
 
       <Text style={styles.label}>Giá (VNĐ)</Text>
-      <TextInput style={styles.input} value={price} onChangeText={setPrice} keyboardType="numeric" />
+      <TextInput
+        style={styles.input}
+        value={price}
+        onChangeText={setPrice}
+        keyboardType="numeric"
+      />
 
       <Button title="Chọn ảnh" onPress={pickImage} />
-      {imageUri && <Image source={{ uri: imageUri }} style={styles.imagePreview} />}
+      {imageUri && (
+        <Image source={{ uri: imageUri }} style={styles.imagePreview} />
+      )}
 
       <Button title="Đăng món" onPress={handleSubmit} />
     </ScrollView>

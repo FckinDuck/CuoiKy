@@ -10,6 +10,7 @@ import ProfileScreen from '../screens/ProfileScreen';
 import SettingScreen from '../screens/SettingScreen';
 import DetailScreen from '../screens/DetailScreen';
 import CreateFoodScreen from '../screens/CreateFoodScreen';
+import EditFoodScreen from '../screens/EditFoodScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -27,6 +28,7 @@ function HomeStack() {
     <Stack.Navigator>
       <Stack.Screen name="Home" component={HomeScreen} />
       <Stack.Screen name="Detail" component={DetailScreen} />
+      <Stack.Screen name="EditFood" component={EditFoodScreen} options={{ title: 'Chỉnh sửa món' }} />
     </Stack.Navigator>
   );
 }
@@ -35,6 +37,7 @@ function SearchStack() {
     <Stack.Navigator>
       <Stack.Screen name="Search" component={SearchScreen} />
       <Stack.Screen name="Detail" component={DetailScreen} />
+      <Stack.Screen name="EditFood" component={EditFoodScreen} options={{ title: 'Chỉnh sửa món' }} />
     </Stack.Navigator>
   );
 }
@@ -43,6 +46,7 @@ function FavoriteStack() {
     <Stack.Navigator>
       <Stack.Screen name="Favorite" component={FavoriteScreen} />
       <Stack.Screen name="Detail" component={DetailScreen} />
+      <Stack.Screen name="EditFood" component={EditFoodScreen} options={{ title: 'Chỉnh sửa món' }} />
     </Stack.Navigator>
   );
 }

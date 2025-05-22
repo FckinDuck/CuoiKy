@@ -1,13 +1,42 @@
 import React from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { Menu, MenuOptions, MenuOption, MenuTrigger } from 'react-native-popup-menu';
 import { COLORS, FONT_SIZES, SPACING, RADIUS } from '../utils/theme';
 
-const FoodCard = ({ food, onPress, onLike, onDislike, onComment, onShare }) => {
+const FoodCard = ({
+  food,
+  onPress,
+  onLike,
+  onDislike,
+  onComment,
+  onShare,
+  onSave,
+  onReport,
+  onHide
+}) => {
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress}>
-      <Image source={{ uri: food.image }} style={styles.image} />
-      <View style={styles.info}>
+
+    <View style={styles.card}>
+      <TouchableOpacity style={styles.imageWrapper} onPress={onPress}>
+        <Image source={{ uri: food.image }} style={styles.image} />
+      </TouchableOpacity>
+
+      <View>
+          <Menu>
+          <MenuTrigger style={styles.moreIcon}>
+            <Icon name="dots-vertical" size={24} color={COLORS.text} />
+          </MenuTrigger>
+          <MenuOptions customStyles={menuOptionsStyles}>
+            <MenuOption onSelect={onSave} text="Lưu" />
+            <MenuOption onSelect={onShare} text="Chia sẻ" />
+            <MenuOption onSelect={onReport} text="Báo cáo" />
+            <MenuOption onSelect={onHide} text="Ẩn" />
+          </MenuOptions>
+        </Menu>
+      </View>
+
+      <TouchableOpacity style={styles.info} onPress={onPress}>
         <Text style={styles.title}>{food.name}</Text>
         <Text style={styles.subtitle}>{food.category}</Text>
 
@@ -32,8 +61,8 @@ const FoodCard = ({ food, onPress, onLike, onDislike, onComment, onShare }) => {
             <Text style={styles.actionText}>Chia sẻ</Text>
           </TouchableOpacity>
         </View>
-      </View>
-    </TouchableOpacity>
+      </TouchableOpacity>
+    </View>
   );
 };
 
@@ -45,9 +74,19 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     elevation: 3,
   },
+  imageWrapper: {
+    position: 'relative',
+  },
   image: {
     width: '100%',
     height: 160,
+  },
+  moreIcon: {
+    position: 'absolute',
+
+    top: 8,
+    right: 8,
+    borderRadius: 16,
   },
   info: {
     padding: SPACING.md,
@@ -66,11 +105,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: SPACING.sm,
+    flexWrap: 'wrap',
   },
   actionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    marginRight: 10,
+    marginBottom: 8,
   },
   actionText: {
     fontSize: FONT_SIZES.small,
@@ -78,5 +119,18 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
 });
+
+const menuOptionsStyles = {
+  optionsContainer: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: COLORS.surface,
+  },
+  optionText: {
+    fontSize: FONT_SIZES.medium,
+    padding: 6,
+    color: COLORS.text,
+  },
+};
 
 export default FoodCard;

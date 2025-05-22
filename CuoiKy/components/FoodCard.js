@@ -1,8 +1,11 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { Menu, MenuOptions, MenuOption, MenuTrigger } from 'react-native-popup-menu';
 import { COLORS, FONT_SIZES, SPACING, RADIUS } from '../utils/theme';
+import firestore from '@react-native-firebase/firestore';
+import { useAuth } from '../providers/AuthProvider';
+import { encode as btoa } from 'base-64';
 
 const FoodCard = ({
   food,
@@ -15,15 +18,65 @@ const FoodCard = ({
   onReport,
   onHide
 }) => {
-  return (
+  const { user } = useAuth();
+  const userId = btoa(user?.email || '');
+  const foodRef = firestore().collection('FOODS').doc(food.id);
 
+  const [fame, setFame] = useState(food.fame || 0);
+  const [commentCount, setCommentCount] = useState(food.commentCount || 0);
+  const [likeStatus, setLikeStatus] = useState(null); 
+
+  useEffect(() => {
+    const unsubscribe = foodRef.collection('likes').doc(userId).onSnapshot(doc => {
+      if (doc.exists) {
+        setLikeStatus(doc.data().type);
+      } else {
+        setLikeStatus(null);
+      }
+    });
+
+    const unsubFood = foodRef.onSnapshot(doc => {
+      if (doc.exists) {
+        const data = doc.data();
+        setFame(data.fame || 0);
+        setCommentCount(data.commentCount || 0);
+      }
+    });
+
+    return () => {
+      unsubscribe();
+      unsubFood();
+    };
+  }, [food.id]);
+
+  const handleLike = async () => {
+    if (likeStatus === 'like') {
+      setFame(fame - 1);
+    } else {
+      if (likeStatus === 'dislike') setFame(fame + 2);
+      else setFame(fame + 1);
+    }
+    await onLike();
+  };
+
+  const handleDislike = async () => {
+    if (likeStatus === 'dislike') {
+      setFame(fame + 1);
+    } else {
+      if (likeStatus === 'like') setFame(fame - 2);
+      else setFame(fame - 1);
+    }
+    await onDislike();
+  };
+
+  return (
     <View style={styles.card}>
       <TouchableOpacity style={styles.imageWrapper} onPress={onPress}>
         <Image source={{ uri: food.image }} style={styles.image} />
       </TouchableOpacity>
 
-      <View>
-          <Menu>
+      <TouchableOpacity onPress={onPress}>
+        <Menu>
           <MenuTrigger style={styles.moreIcon}>
             <Icon name="dots-vertical" size={24} color={COLORS.text} />
           </MenuTrigger>
@@ -34,31 +87,37 @@ const FoodCard = ({
             <MenuOption onSelect={onHide} text="Ẩn" />
           </MenuOptions>
         </Menu>
-      </View>
+      </TouchableOpacity>
 
       <TouchableOpacity style={styles.info} onPress={onPress}>
         <Text style={styles.title}>{food.name}</Text>
         <Text style={styles.subtitle}>{food.category}</Text>
 
         <View style={styles.actions}>
-          <TouchableOpacity onPress={onLike} style={styles.actionBtn}>
-            <Icon name="thumb-up-outline" size={20} color={COLORS.primary} />
-            <Text style={styles.actionText}>Thích</Text>
+          <TouchableOpacity onPress={handleLike} style={styles.actionBtn}>
+            <Icon
+              name="thumb-up-outline"
+              size={20}
+              color={likeStatus === 'like' ? COLORS.primary : COLORS.subText}
+            />
+            <Text style={styles.actionText}>{fame}</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={onDislike} style={styles.actionBtn}>
-            <Icon name="thumb-down-outline" size={20} color={COLORS.error} />
-            <Text style={styles.actionText}>Không thích</Text>
+          <TouchableOpacity onPress={handleDislike} style={styles.actionBtn}>
+            <Icon
+              name="thumb-down-outline"
+              size={20}
+              color={likeStatus === 'dislike' ? COLORS.error : COLORS.subText}
+            />
           </TouchableOpacity>
 
           <TouchableOpacity onPress={onComment} style={styles.actionBtn}>
             <Icon name="comment-outline" size={20} color={COLORS.subText} />
-            <Text style={styles.actionText}>Bình luận</Text>
+            <Text style={styles.actionText}>{commentCount}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity onPress={onShare} style={styles.actionBtn}>
             <Icon name="share-outline" size={20} color={COLORS.subText} />
-            <Text style={styles.actionText}>Chia sẻ</Text>
           </TouchableOpacity>
         </View>
       </TouchableOpacity>
@@ -83,8 +142,8 @@ const styles = StyleSheet.create({
   },
   moreIcon: {
     position: 'absolute',
-
-    top: 8,
+    backgroundColor: COLORS.surface,
+    bottom: 130,
     right: 8,
     borderRadius: 16,
   },

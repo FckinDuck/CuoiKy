@@ -12,7 +12,7 @@ const styles = StyleSheet.create({
   container: {
     paddingVertical: SPACING.md,
     paddingHorizontal: SPACING.lg,
-    backgroundColor: COLORS.primary,
+    backgroundColor: "#FF6B00",
   },
   title: {
     color: 'white',

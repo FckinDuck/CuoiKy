@@ -6,67 +6,58 @@ import { COLORS, FONT_SIZES, SPACING, RADIUS } from '../utils/theme';
 import firestore from '@react-native-firebase/firestore';
 import { useAuth } from '../providers/AuthProvider';
 import { encode as btoa } from 'base-64';
+import { handleLike as likeUtil, handleDislike as dislikeUtil } from '../utils/likeUtils';
 
 const FoodCard = ({
   food,
   onPress,
-  onLike,
-  onDislike,
   onComment,
   onShare,
   onSave,
   onReport,
   onHide
 }) => {
-  const { user } = useAuth();
+  const { user, role = 'user' } = useAuth();
   const userId = btoa(user?.email || '');
   const foodRef = firestore().collection('FOODS').doc(food.id);
 
   const [fame, setFame] = useState(food.fame || 0);
   const [commentCount, setCommentCount] = useState(food.commentCount || 0);
-  const [likeStatus, setLikeStatus] = useState(null); 
+  const [likeStatus, setLikeStatus] = useState(null);
 
   useEffect(() => {
-    const unsubscribe = foodRef.collection('likes').doc(userId).onSnapshot(doc => {
-      if (doc.exists) {
+    if (!food?.id || !userId) return;
+
+    const unsubscribeLike = foodRef.collection('likes').doc(userId).onSnapshot(doc => {
+      if (doc.exists && doc.data()) {
         setLikeStatus(doc.data().type);
       } else {
         setLikeStatus(null);
       }
     });
 
-    const unsubFood = foodRef.onSnapshot(doc => {
+    const unsubscribeFood = foodRef.onSnapshot(doc => {
       if (doc.exists) {
         const data = doc.data();
-        setFame(data.fame || 0);
-        setCommentCount(data.commentCount || 0);
+        if (data) {
+          setFame(data.fame || 0);
+          setCommentCount(data.commentCount || 0);
+        }
       }
     });
 
     return () => {
-      unsubscribe();
-      unsubFood();
+      unsubscribeLike();
+      unsubscribeFood();
     };
-  }, [food.id]);
+  }, [food?.id, userId]);
 
   const handleLike = async () => {
-    if (likeStatus === 'like') {
-      setFame(fame - 1);
-    } else {
-      if (likeStatus === 'dislike') setFame(fame + 2);
-      else setFame(fame + 1);
-    }
-    await onLike();
+    await likeUtil({ user, role, food });
   };
 
   const handleDislike = async () => {
-    if (likeStatus === 'dislike') {
-      setFame(fame + 1);
-    } else {
-      if (likeStatus === 'like') setFame(fame - 2);
-      else setFame(fame - 1);
-    }
-    await onDislike();
+    await dislikeUtil({ user, role, food });
   };
 
   return (

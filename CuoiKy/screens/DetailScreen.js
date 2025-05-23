@@ -1,17 +1,17 @@
 import React, { useEffect, useLayoutEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, Image, ScrollView,
-  ActivityIndicator, TouchableOpacity, Alert
+  View, Text, StyleSheet, Image,
+  ActivityIndicator, TouchableOpacity, Alert, ScrollView
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import firestore from '@react-native-firebase/firestore';
 import { useAuth } from '../providers/AuthProvider';
 import { canEditFood } from '../utils/permissions';
 import CommentInput from '../components/CommentInput';
-import CommentSection from '../components/Comment';
 import { COLORS, FONT_SIZES, SPACING } from '../utils/theme';
 import { encode as btoa } from 'base-64';
-import { handleLike as likeFood, handleDislike as dislikeFood, handleFavorite } from '../utils/likeUtils';
+import { handleLike, handleDislike, handleFavorite } from '../utils/likeUtils';
+import CommentSection from '../components/CommentSection';
 
 const DetailScreen = ({ route, navigation }) => {
   const { user } = useAuth();
@@ -48,7 +48,7 @@ const DetailScreen = ({ route, navigation }) => {
     fetchFood();
 
     const unsubscribeLike = foodRef.collection('likes').doc(userId).onSnapshot(doc => {
-      setLikeStatus(doc.exists ? doc.data().type : null);
+      setLikeStatus(doc.exists && doc.data() ? doc.data().type : null);
     });
 
     const unsubFood = foodRef.onSnapshot(doc => {
@@ -92,7 +92,6 @@ const DetailScreen = ({ route, navigation }) => {
     }
   }, [navigation, food, user]);
 
-  // Ẩn TabBar
   useLayoutEffect(() => {
     const parent = navigation.getParent?.();
     if (parent) {
@@ -107,11 +106,11 @@ const DetailScreen = ({ route, navigation }) => {
   }, [navigation]);
 
   const onLike = async () => {
-    await likeFood({ user, role: user.role, food });
+    await handleLike({ user, target: { id: food.id, type: 'food' } });
   };
 
   const onDislike = async () => {
-    await dislikeFood({ user, role: user.role, food });
+    await handleDislike({ user, target: { id: food.id, type: 'food' } });
   };
 
   const onToggleFavorite = async () => {
@@ -139,9 +138,8 @@ const DetailScreen = ({ route, navigation }) => {
 
   return (
     <View style={{ flex: 1, backgroundColor: COLORS.background }}>
-      <ScrollView contentContainerStyle={{ paddingBottom: 100 }} style={styles.container}>
+      <ScrollView>
         <Image source={{ uri: food.image }} style={styles.image} />
-
         <View style={styles.info}>
           <View style={styles.headerRow}>
             <Text style={styles.title}>{food.name}</Text>
@@ -187,14 +185,13 @@ const DetailScreen = ({ route, navigation }) => {
             </TouchableOpacity>
           </View>
         </View>
-
-        <View style={styles.commentSection}>
-          <CommentSection foodId={foodId}/>
-        </View>
+        <View style={{ height: 1, backgroundColor: COLORS.border }} />
+        <Text style={{ padding: SPACING.md, fontSize: FONT_SIZES.medium }}>
+          Bình luận
+          </Text>
+        <CommentSection foodId={food.id} />
       </ScrollView>
-
-      {/* Nằm sát dưới cùng màn hình */}
-      <CommentInput foodId={food.id} />
+      <CommentInput foodId={food.id} user={user.id} />
     </View>
   );
 };
@@ -228,13 +225,6 @@ const styles = StyleSheet.create({
   actionText: {
     fontSize: FONT_SIZES.small,
     color: COLORS.subText,
-  },
-  commentSection: {
-    paddingHorizontal: SPACING.md,
-    paddingBottom: SPACING.xl,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    marginTop: SPACING.lg,
   },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 });

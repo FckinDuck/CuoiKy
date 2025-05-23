@@ -34,31 +34,54 @@ const Comment = ({ comment }) => {
   const isOwner = user?.email === comment.email || user?.role === 'admin';
   const isReportable = !isOwner && user?.role !== 'admin';
   const commentRef = firestore().collection('COMMENT').doc(comment.selfId);
+  const foodRef = firestore().collection('FOODS').doc(comment.targetId);
+  const [displayName, setDisplayName] = useState('');
 
   useEffect(() => {
-    const unsubscribeLike = commentRef
-      .collection('likes')
-      .doc(userId)
-      .onSnapshot(doc => {
-        setLikeStatus(doc.exists ? doc.data().type : null);
-      });
+  if (!comment?.selfId || !comment?.email || !user?.email) return;
 
-    const unsubscribeReplies = firestore()
-      .collection('COMMENT')
-      .where('targetId', '==', comment.selfId)
-      .onSnapshot(snapshot => {
-        const replies = snapshot.docs.map(doc => doc.data());
-        setChildComments(replies);
-      });
+  const currentUserId = btoa(user.email);
+  const currentCommentRef = firestore().collection('COMMENT').doc(comment.selfId);
 
-    return () => {
-      unsubscribeLike();
-      unsubscribeReplies();
-    };
-  }, [comment.selfId, userId]);
+  const unsubscribeLike = currentCommentRef
+    .collection('likes')
+    .doc(currentUserId)
+    .onSnapshot(doc => {
+      setLikeStatus(doc.exists ? doc.data().type : null);
+    });
 
-  const onLike = () => handleLike({ user, role: user.role, food: { id: comment.selfId } });
-  const onDislike = () => handleDislike({ user, role: user.role, food: { id: comment.selfId } });
+  const unsubscribeReplies = firestore()
+    .collection('COMMENT')
+    .where('targetId', '==', comment.selfId)
+    .onSnapshot(snapshot => {
+      const replies = snapshot.docs.map(doc => doc.data());
+      setChildComments(replies);
+    });
+
+  const fetchUserInfo = async () => {
+    try {
+      const commentUserId = btoa(comment.email);
+      const userDoc = await firestore().collection('USERS').doc(commentUserId).get();
+      if (userDoc.exists) {
+        setDisplayName(userDoc.data().displayName || comment.email);
+      } else {
+        setDisplayName(comment.email);
+      }
+    } catch (error) {
+      console.error('Lỗi khi lấy tên hiển thị:', error);
+      setDisplayName(comment.email);
+    }
+  };
+  fetchUserInfo();
+
+  return () => {
+    unsubscribeLike();
+    unsubscribeReplies();
+  };
+}, [comment?.email, comment?.selfId, user?.email]);
+
+  const onLike = () => handleLike({ user, role: user.role, target: { id: comment.selfId, type: 'comment' } });
+  const onDislike = () => handleDislike({ user, role: user.role, target: { id: comment.selfId, type: 'comment' } });
 
   const onSubmitReply = async () => {
     if (!replyText.trim()) return;
@@ -94,6 +117,7 @@ const Comment = ({ comment }) => {
         style: 'destructive',
         onPress: async () => {
           await commentRef.delete();
+          transaction.update(foodRef, {commentCount: currentCount - 1});
         },
       },
     ]);
@@ -106,6 +130,7 @@ const Comment = ({ comment }) => {
         text: 'Báo cáo',
         onPress: async () => {
           await commentRef.update({ isReported: true });
+          
         },
       },
     ]);
@@ -114,7 +139,7 @@ const Comment = ({ comment }) => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.email}>{comment.email}</Text>
+        <Text style={styles.email}>{displayName}</Text>
         <Text style={styles.time}>{moment(comment.createAt?.toDate()).fromNow()}</Text>
       </View>
 

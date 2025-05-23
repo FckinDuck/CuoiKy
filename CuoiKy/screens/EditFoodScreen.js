@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -30,6 +30,7 @@ const EditFoodScreen = ({ route }) => {
   const [price, setPrice] = useState('');
   const [category, setCategory] = useState('');
   const [image, setImage] = useState('');
+
 
   useEffect(() => {
     const fetchFood = async () => {
@@ -66,6 +67,52 @@ const EditFoodScreen = ({ route }) => {
 
     fetchFood();
   }, [foodId, user, navigation]);
+
+  const handleDelete = useCallback(() => {
+    Alert.alert('Xác nhận xoá', 'Bạn có chắc muốn xoá món ăn này và toàn bộ bình luận?', [
+      { text: 'Huỷ', style: 'cancel' },
+      {
+        text: 'Xoá',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            const batch = firestore().batch();
+
+            const commentSnapshot = await firestore()
+              .collection('COMMENT')
+              .where('targetId', '==', foodId)
+              .get();
+
+            commentSnapshot.forEach(doc => {
+              batch.delete(doc.ref);
+            });
+
+            const foodCommentDoc = await firestore().collection('COMMENT').doc(foodId).get();
+            if (foodCommentDoc.exists) {
+              batch.delete(foodCommentDoc.ref);
+            }
+
+            batch.delete(firestore().collection('FOODS').doc(foodId));
+
+            await batch.commit();
+            Alert.alert('Đã xoá', 'Món ăn và các bình luận đã bị xoá.');
+            navigation.goBack();
+          } catch (err) {
+            console.error('Lỗi xoá:', err);
+            Alert.alert('Lỗi', 'Không thể xoá món ăn.');
+          }
+        },
+      },
+    ]);
+  }, [foodId, navigation]);
+
+  useEffect(() => {
+    if (food) {
+      navigation.setOptions({
+        headerRight: () => <Button title="Xoá" onPress={handleDelete} color="#d11a2a" />,
+      });
+    }
+  }, [navigation, food, handleDelete]);
 
   const handleChooseImage = async () => {
     const result = await launchImageLibrary({ mediaType: 'photo' });
@@ -114,20 +161,10 @@ const EditFoodScreen = ({ route }) => {
       <TextInput value={name} onChangeText={setName} style={styles.input} />
 
       <Text style={styles.label}>Mô tả</Text>
-      <TextInput
-        value={description}
-        onChangeText={setDescription}
-        style={styles.input}
-        multiline
-      />
+      <TextInput value={description} onChangeText={setDescription} style={styles.input} multiline />
 
       <Text style={styles.label}>Giá (VNĐ)</Text>
-      <TextInput
-        value={price}
-        onChangeText={setPrice}
-        keyboardType="numeric"
-        style={styles.input}
-      />
+      <TextInput value={price} onChangeText={setPrice} keyboardType="numeric" style={styles.input} />
 
       <Text style={styles.label}>Phân loại</Text>
       <TextInput value={category} onChangeText={setCategory} style={styles.input} />

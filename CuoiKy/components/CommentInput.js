@@ -8,64 +8,64 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
-  ActivityIndicator,
 } from 'react-native';
 import firestore from '@react-native-firebase/firestore';
 import { useAuth } from '../providers/AuthProvider';
 import { COLORS, FONT_SIZES, SPACING, RADIUS } from '../utils/theme';
+import { encode as btoa } from 'base-64';
 
-const CommentInput = ({ foodId }) => {
+const CommentInput = ({ foodId, foodName }) => {
   const { user } = useAuth();
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(false);
 
   const onSubmit = async () => {
-  if (!user || !user.email) {
-    Alert.alert('Lỗi', 'Vui lòng đăng nhập để bình luận.');
-    return;
-  }
+    if (!user || !user.email) {
+      Alert.alert('Lỗi', 'Vui lòng đăng nhập để bình luận.');
+      return;
+    }
 
-  if (!text.trim()) return;
+    if (!text.trim()) return;
 
-  setLoading(true);
-  try {
-    const now = firestore.Timestamp.now();
-    const commentRef = firestore().collection('COMMENT').doc();
-    const foodRef = firestore().collection('FOOD').doc(foodId);
+    setLoading(true);
+    try {
+      const now = firestore.Timestamp.now();
+      const timestamp = Date.now();
+      const encodedFoodName = btoa(foodName).replace(/[^a-zA-Z0-9]/g, '');
+      const encodedEmail = btoa(user.email).replace(/[^a-zA-Z0-9]/g, '');
+      const commentId = `${encodedFoodName}_${encodedEmail}_${timestamp}`;
 
-    await firestore().runTransaction(async (transaction) => {
-      // Thêm bình luận mới
-      transaction.set(commentRef, {
-        createAt: now,
-        lastUpdate: now,
-        descInfo: text.trim(),
-        fame: 0,
-        isHighlighted: false,
-        isReported: false,
-        selfId: commentRef.id,
-        targetId: foodId,
-        email: user.email,
+      const commentRef = firestore().collection('COMMENT').doc(commentId);
+      const foodRef = firestore().collection('FOODS').doc(foodId);
+
+      await firestore().runTransaction(async (transaction) => {
+        transaction.set(commentRef, {
+          createAt: now,
+          lastUpdate: now,
+          descInfo: text.trim(),
+          fame: 0,
+          isHighlighted: false,
+          isReported: false,
+          selfId: commentId,
+          targetId: foodId,
+          email: user.email,
+        });
+
+        const foodSnap = await transaction.get(foodRef);
+        const currentCount = foodSnap.exists ? (foodSnap.data().commentCount || 0) : 0;
+        transaction.update(foodRef, {
+          commentCount: currentCount + 1,
+        });
       });
 
-      const foodDoc = await transaction.get(foodRef);
-      if (!foodDoc.exists) {
-        throw new Error('Món ăn không tồn tại');
-      }
-
-      const currentCount = foodDoc.data().commentCount || 0;
-      transaction.update(foodRef, {
-        commentCount: currentCount + 1,
-      });
-    });
-
-    setText('');
-  } catch (error) {
-    console.error('Error submitting comment:', error);
-    Alert.alert('Lỗi', 'Không thể gửi bình luận. Vui lòng thử lại.');
-  } finally {
-    setLoading(false);
-  }
-};
+      setText('');
+    } catch (error) {
+      console.error('Submit comment failed:', error);
+      Alert.alert('Lỗi', 'Không thể gửi bình luận. Vui lòng thử lại.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <KeyboardAvoidingView
@@ -81,14 +81,9 @@ const CommentInput = ({ foodId }) => {
           placeholderTextColor={COLORS.subText}
           style={styles.input}
           multiline
-          editable={!loading}
         />
         <TouchableOpacity onPress={onSubmit} style={styles.button} disabled={loading}>
-          {loading ? (
-            <ActivityIndicator color={COLORS.onPrimary} />
-          ) : (
-            <Text style={styles.buttonText}>Gửi</Text>
-          )}
+          <Text style={styles.buttonText}>Gửi</Text>
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>

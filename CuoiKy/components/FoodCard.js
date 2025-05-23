@@ -53,11 +53,11 @@ const FoodCard = ({
   }, [food?.id, userId]);
 
   const handleLike = async () => {
-    await likeUtil({ user, role, food });
+    await likeUtil({ user, role: role, target: { id: food.id, type: 'food' } });
   };
 
   const handleDislike = async () => {
-    await dislikeUtil({ user, role, food });
+    await dislikeUtil({ user, role: role, target: { id: food.id, type: 'food' } });
   };
 
   return (

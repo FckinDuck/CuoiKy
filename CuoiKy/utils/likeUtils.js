@@ -1,71 +1,83 @@
 import firestore from '@react-native-firebase/firestore';
 import { encode as btoa } from 'base-64';
 
-export const handleLike = async ({ user, role, food }) => {
-  if (!user?.email || !food?.id) return;
+const getTargetRef = (id,type ) => firestore().collection(type === 'food' ? 'FOODS' : 'COMMENTS').doc(id);
 
-  const userId = btoa(user.email);
-  const foodRef = firestore().collection('FOODS').doc(food.id);
-  const likesRef = foodRef.collection('likes').doc(userId);
 
-  const likeDoc = await likesRef.get();
-  const currentData = likeDoc.exists ? likeDoc.data() : {};
-  const isLiked = currentData?.type === 'like';
-
+const updateFameWithRole = async (transaction, targetRef, userId, type, role, isRemoving, isSwitching) => {
   const fameChange = role === 'admin' ? 100 : 1;
 
+  const targetDoc = await transaction.get(targetRef);
+  if (!targetDoc.exists) return;
+
+  const currentFame = targetDoc.data().fame || 0;
+
+  let newFame = currentFame;
+
+  if (type === 'like') {
+    newFame += isRemoving ? -fameChange : fameChange;
+    if (isSwitching) newFame += fameChange; 
+  } else {
+    newFame += isRemoving ? fameChange : -fameChange;
+    if (isSwitching) newFame -= fameChange; 
+  }
+
+  transaction.update(targetRef, { fame: newFame });
+};
+
+export const handleLike = async ({ user, role, target }) => {
+  if (!user?.email || !target?.id || !target?.type) return;
+
+  const userId = btoa(user.email);
+  const targetRef = getTargetRef(target.id, target.type);
+  const likeDocRef = targetRef.collection('likes').doc(userId);
+  const likeDoc = await likeDocRef.get();
+  const currentType = likeDoc.exists ? likeDoc.data()?.type : null;
+
+  const isLiked = currentType === 'like';
+  const isSwitchingFromDislike = currentType === 'dislike';
+
   await firestore().runTransaction(async transaction => {
-    const foodDoc = await transaction.get(foodRef);
-    if (!foodDoc.exists) return;
-
-    const currentFame = foodDoc.data().fame || 0;
-
     if (isLiked) {
-      transaction.delete(likesRef);
-      transaction.update(foodRef, { fame: currentFame - fameChange });
+      transaction.delete(likeDocRef);
     } else {
-      transaction.set(likesRef, { type: 'like' });
-      transaction.update(foodRef, { fame: currentFame + fameChange });
-
-      const prevDislike = await foodRef.collection('likes').doc(userId).get();
-      if (prevDislike.exists && prevDislike.data()?.type === 'dislike') {
-        transaction.delete(foodRef.collection('likes').doc(userId));
-      }
+      transaction.set(likeDocRef, { type: 'like' });
     }
+
+    if (isSwitchingFromDislike) {
+      transaction.delete(likeDocRef); 
+      transaction.set(likeDocRef, { type: 'like' });
+    }
+
+    await updateFameWithRole(transaction, targetRef, userId, 'like', role, isLiked, isSwitchingFromDislike);
   });
 };
 
-export const handleDislike = async ({ user, role, food }) => {
-  if (!user?.email || !food?.id) return;
+export const handleDislike = async ({ user, role, target }) => {
+  if (!user?.email || !target?.id || !target?.type) return;
 
   const userId = btoa(user.email);
-  const foodRef = firestore().collection('FOODS').doc(food.id);
-  const likesRef = foodRef.collection('likes').doc(userId);
+  const targetRef = getTargetRef(target.type, target.id);
+  const likeDocRef = targetRef.collection('likes').doc(userId);
+  const likeDoc = await likeDocRef.get();
+  const currentType = likeDoc.exists ? likeDoc.data()?.type : null;
 
-  const dislikeDoc = await likesRef.get();
-  const currentData = dislikeDoc.exists ? dislikeDoc.data() : {};
-  const isDisliked = currentData?.type === 'dislike';
-
-  const fameChange = role === 'admin' ? 100 : 1;
+  const isDisliked = currentType === 'dislike';
+  const isSwitchingFromLike = currentType === 'like';
 
   await firestore().runTransaction(async transaction => {
-    const foodDoc = await transaction.get(foodRef);
-    if (!foodDoc.exists) return;
-
-    const currentFame = foodDoc.data().fame || 0;
-
     if (isDisliked) {
-      transaction.delete(likesRef);
-      transaction.update(foodRef, { fame: currentFame + fameChange });
+      transaction.delete(likeDocRef);
     } else {
-      transaction.set(likesRef, { type: 'dislike' });
-      transaction.update(foodRef, { fame: currentFame - fameChange });
-
-      const prevLike = await foodRef.collection('likes').doc(userId).get();
-      if (prevLike.exists && prevLike.data()?.type === 'like') {
-        transaction.delete(foodRef.collection('likes').doc(userId));
-      }
+      transaction.set(likeDocRef, { type: 'dislike' });
     }
+
+    if (isSwitchingFromLike) {
+      transaction.delete(likeDocRef);
+      transaction.set(likeDocRef, { type: 'dislike' });
+    }
+
+    await updateFameWithRole(transaction, targetRef, userId, 'dislike', role, isDisliked, isSwitchingFromLike);
   });
 };
 

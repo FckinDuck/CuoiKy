@@ -64,8 +64,8 @@ const HomeScreen = ({ navigation }) => {
             <FoodCard
               food={item}
               onPress={() => navigation.navigate('Detail', { foodId: item.id })}
-              onLike={() => handleLike({ user, role, food: item })}
-              onDislike={() => handleDislike({ user, role, food: item })} 
+              onLike={() => handleLike({ user, role: role, target: { id: food.id, type: 'food' } })}
+              onDislike={() => handleDislike({ user, role: role, target: { id: food.id, type: 'food' } })} 
             />
           )}
         />

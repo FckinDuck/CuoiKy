@@ -43,12 +43,6 @@ export const handleLike = async ({ user, role, target }) => {
     } else {
       transaction.set(likeDocRef, { type: 'like' });
     }
-
-    if (isSwitchingFromDislike) {
-      transaction.delete(likeDocRef); 
-      transaction.set(likeDocRef, { type: 'like' });
-    }
-
     await updateFameWithRole(transaction, targetRef, userId, 'like', role, isLiked, isSwitchingFromDislike);
   });
 };
@@ -57,7 +51,7 @@ export const handleDislike = async ({ user, role, target }) => {
   if (!user?.email || !target?.id || !target?.type) return;
 
   const userId = btoa(user.email);
-  const targetRef = getTargetRef(target.type, target.id);
+  const targetRef = getTargetRef(target.id, target.type);
   const likeDocRef = targetRef.collection('likes').doc(userId);
   const likeDoc = await likeDocRef.get();
   const currentType = likeDoc.exists ? likeDoc.data()?.type : null;

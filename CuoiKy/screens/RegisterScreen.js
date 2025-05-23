@@ -1,70 +1,105 @@
 import React, { useState } from 'react';
-import { View, TextInput, Button, StyleSheet, Text, Alert, ActivityIndicator } from 'react-native';
+import {
+  View,
+  TextInput,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
 import { useAuth } from '../providers/AuthProvider';
+import { COLORS, SPACING, RADIUS, FONT_SIZES } from '../utils/theme';
 
 const RegisterScreen = ({ navigation }) => {
   const { register } = useAuth();
-
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleRegister = async () => {
-    if (!email || !password || !displayName) {
-      Alert.alert('Lỗi', 'Vui lòng nhập đầy đủ thông tin');
+    if (!email || !password || !displayName || !confirmPassword) {
+      setError('Vui lòng nhập đầy đủ thông tin');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError('Mật khẩu xác nhận không khớp');
       return;
     }
 
+    setError('');
     setLoading(true);
     try {
       await register(email, password, displayName);
-      setLoading(false);
       Alert.alert('Thành công', 'Tạo tài khoản thành công', [
-        {
-          text: 'OK',
-          onPress: () => navigation.navigate('Login'),
-        },
+        { text: 'OK', onPress: () => navigation.navigate('Login') },
       ]);
     } catch (err) {
+      setError(err.message || 'Đăng ký thất bại');
+    } finally {
       setLoading(false);
-      Alert.alert('Lỗi đăng ký', err.message);
     }
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Đăng ký</Text>
+      <Text style={styles.title}>Tạo tài khoản</Text>
+
       <TextInput
         placeholder="Tên hiển thị"
-        style={styles.input}
-        onChangeText={setDisplayName}
         value={displayName}
+        onChangeText={setDisplayName}
+        style={styles.input}
         autoCapitalize="words"
+        placeholderTextColor="#999"
       />
+
       <TextInput
         placeholder="Email"
-        style={styles.input}
-        onChangeText={setEmail}
-        autoCapitalize="none"
-        keyboardType="email-address"
         value={email}
+        onChangeText={setEmail}
+        keyboardType="email-address"
+        autoCapitalize="none"
+        style={styles.input}
+        placeholderTextColor="#999"
       />
+
       <TextInput
         placeholder="Mật khẩu"
-        style={styles.input}
+        value={password}
         onChangeText={setPassword}
         secureTextEntry
-        value={password}
+        style={styles.input}
+        placeholderTextColor="#999"
       />
+
+      <TextInput
+        placeholder="Xác nhận mật khẩu"
+        value={confirmPassword}
+        onChangeText={setConfirmPassword}
+        secureTextEntry
+        style={styles.input}
+        placeholderTextColor="#999"
+      />
+
+      {error ? <Text style={styles.error}>{error}</Text> : null}
+
       {loading ? (
-        <ActivityIndicator size="large" color="#0000ff" style={{ marginVertical: 12 }} />
+        <ActivityIndicator color={COLORS.primary} style={{ marginTop: SPACING.lg }} />
       ) : (
-        <Button title="Tạo tài khoản" onPress={handleRegister} />
+        <>
+          <TouchableOpacity style={styles.registerButton} onPress={handleRegister}>
+            <Text style={styles.registerButtonText}>Đăng ký</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+            <Text style={styles.loginText}>Đã có tài khoản? Đăng nhập</Text>
+          </TouchableOpacity>
+        </>
       )}
-      <Text style={styles.link} onPress={() => navigation.navigate('Login')}>
-        Đã có tài khoản? Đăng nhập
-      </Text>
     </View>
   );
 };
@@ -72,18 +107,49 @@ const RegisterScreen = ({ navigation }) => {
 export default RegisterScreen;
 
 const styles = StyleSheet.create({
-  container: { padding: 20, flex: 1, justifyContent: 'center' },
-  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 20, textAlign: 'center' },
-  input: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
-    marginBottom: 15,
-    paddingVertical: 8,
-    fontSize: 16,
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    padding: SPACING.lg,
+    backgroundColor: '#fff',
   },
-  link: {
-    marginTop: 10,
-    color: 'blue',
+  title: {
+    fontSize: FONT_SIZES.xLarge || 24,
+    fontWeight: 'bold',
     textAlign: 'center',
+    marginBottom: SPACING.lg,
+    color: COLORS.text || '#333',
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: RADIUS.md || 10,
+    padding: SPACING.md,
+    marginBottom: SPACING.md,
+    fontSize: FONT_SIZES.medium || 16,
+    color: COLORS.text || '#333',
+  },
+  error: {
+    color: COLORS.error || 'red',
+    marginBottom: SPACING.sm,
+    textAlign: 'center',
+  },
+  registerButton: {
+    backgroundColor: COLORS.primary || '#007BFF',
+    borderRadius: RADIUS.md || 10,
+    paddingVertical: SPACING.md,
+    alignItems: 'center',
+    marginBottom: SPACING.md,
+  },
+  registerButtonText: {
+    color: '#fff',
+    fontSize: FONT_SIZES.medium || 16,
+    fontWeight: 'bold',
+  },
+  loginText: {
+    textAlign: 'center',
+    color: COLORS.subText || '#666',
+    fontSize: FONT_SIZES.small || 14,
+    textDecorationLine: 'underline',
   },
 });

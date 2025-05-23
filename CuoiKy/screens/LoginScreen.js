@@ -1,15 +1,23 @@
 import React, { useState } from 'react';
-import { View, TextInput, Text, ActivityIndicator, StyleSheet, TouchableOpacity } from 'react-native';
+import {
+  View,
+  TextInput,
+  Text,
+  ActivityIndicator,
+  StyleSheet,
+  TouchableOpacity,
+  Alert,
+} from 'react-native';
 import { useAuth } from '../providers/AuthProvider';
 import { COLORS, SPACING, RADIUS, FONT_SIZES } from '../utils/theme';
 
 const LoginScreen = ({ navigation }) => {
-  const { login } = useAuth();
+  const { login, resetPassword } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-
+  
   const handleLogin = async () => {
     setLoading(true);
     setError('');
@@ -19,6 +27,20 @@ const LoginScreen = ({ navigation }) => {
       setError(err.message || 'Đăng nhập thất bại');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email) {
+      Alert.alert('Vui lòng nhập email trước');
+      return;
+    }
+
+    try {
+      await resetPassword(email);
+      Alert.alert('Thành công', 'Email đặt lại mật khẩu đã được gửi');
+    } catch (err) {
+      Alert.alert('Lỗi', err.message || 'Không thể gửi email đặt lại mật khẩu');
     }
   };
 
@@ -44,6 +66,10 @@ const LoginScreen = ({ navigation }) => {
         style={styles.input}
         placeholderTextColor="#999"
       />
+
+      <TouchableOpacity onPress={handleForgotPassword}>
+        <Text style={styles.forgotPasswordText}>Quên mật khẩu?</Text>
+      </TouchableOpacity>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
@@ -83,9 +109,16 @@ const styles = StyleSheet.create({
     borderColor: '#ddd',
     borderRadius: RADIUS.md || 10,
     padding: SPACING.md,
-    marginBottom: SPACING.md,
+    marginBottom: SPACING.sm,
     fontSize: FONT_SIZES.medium || 16,
     color: COLORS.text || '#333',
+  },
+  forgotPasswordText: {
+    textAlign: 'right',
+    color: COLORS.primary || '#007BFF',
+    fontSize: FONT_SIZES.small || 14,
+    marginBottom: SPACING.md,
+    textDecorationLine: 'underline',
   },
   error: {
     color: COLORS.error || 'red',

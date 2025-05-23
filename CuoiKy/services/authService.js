@@ -61,3 +61,7 @@ export const loginUser = async (email, password) => {
 export const logoutUser = async () => {
   await auth().signOut();
 };
+
+export const resetPassword = async (email) => {
+  await auth().sendPasswordResetEmail(email);
+};

@@ -58,6 +58,13 @@ const Comment = ({ comment }) => {
       setChildComments(replies);
     });
 
+  const unsubscribeComment = currentCommentRef.onSnapshot((doc) => {
+    if (doc.exists) {
+      const updatedData = doc.data();
+      comment.fame = updatedData.fame;
+    }
+  });
+
   const fetchUserInfo = async () => {
     try {
       const commentUserId = btoa(comment.email);
@@ -77,8 +84,10 @@ const Comment = ({ comment }) => {
   return () => {
     unsubscribeLike();
     unsubscribeReplies();
+    unsubscribeComment(); 
   };
 }, [comment?.email, comment?.selfId, user?.email]);
+
 
   const onLike = () => handleLike({ user, role: user.role, target: { id: comment.selfId, type: 'comment' } });
   const onDislike = () => handleDislike({ user, role: user.role, target: { id: comment.selfId, type: 'comment' } });
@@ -222,13 +231,9 @@ const Comment = ({ comment }) => {
 
       <FlatList
         data={childComments}
-        keyExtractor={(item, index) => `${item.selfId}_${index}`}
-        renderItem={({ item }) => (
-          <View style={styles.reply}>
-            <Text style={styles.desc}>{item.descInfo}</Text>
-          </View>
-        )}
-      />
+        keyExtractor={(item) => item.selfId}
+        renderItem={({ item }) => <Comment comment={item} isChild />}
+        />
     </View>
   );
 };

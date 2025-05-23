@@ -81,19 +81,28 @@ export const handleFavorite = async ({ user, food, isFavorite }) => {
 
   try {
     const favDoc = await favDocRef.get();
-    const currentList = favDoc.exists ? favDoc.data().foodIdList || [] : [];
+    let rawList = [];
+
+    if (favDoc.exists) {
+      const data = favDoc.data();
+      rawList = Array.isArray(data?.foodIdList) ? data.foodIdList : [];
+    }
+
+    const currentList = rawList.map(item =>
+      typeof item === 'string' ? { foodId: item } : item
+    );
 
     const index = currentList.findIndex(item => item.foodId === food.id);
     let updatedFoodIdList = [];
 
     if (isFavorite && index !== -1) {
-    
+      
       updatedFoodIdList = currentList.filter(item => item.foodId !== food.id);
     } else if (!isFavorite && index === -1) {
-      
+
       updatedFoodIdList = [...currentList, { foodId: food.id }];
-    } else {
       
+    } else {
       updatedFoodIdList = currentList;
     }
 
@@ -102,3 +111,5 @@ export const handleFavorite = async ({ user, food, isFavorite }) => {
     console.error('handleFavorite error:', error);
   }
 };
+
+

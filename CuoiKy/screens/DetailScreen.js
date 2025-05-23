@@ -52,6 +52,7 @@ const DetailScreen = ({ route, navigation }) => {
     });
 
     const unsubFood = foodRef.onSnapshot(doc => {
+      
       if (doc.exists) {
         const data = doc.data();
         setFame(data.fame || 0);
@@ -59,11 +60,15 @@ const DetailScreen = ({ route, navigation }) => {
         setFood(prev => ({ ...prev, ...data }));
       }
     });
+    
 
     const unsubscribeFavorite = favoriteRef.onSnapshot(doc => {
       if (doc.exists) {
-        const list = doc.data().foodIdList || [];
-        const found = list.some(item => item.foodId === foodId);
+        console.log('Favorite doc data:', doc.data());
+        const list = doc?.data()?.foodIdList || [];
+        const found = list.some(item =>
+          typeof item === 'string' ? item === foodId : item.foodId === foodId
+        );
         setIsFavorite(found);
       } else {
         setIsFavorite(false);

@@ -18,7 +18,6 @@ import { encode as btoa } from 'base-64';
 
 const CreateFoodScreen = ({ navigation }) => {
   const { user } = useAuth();
-  const { theme } = useTheme();
   const [name, setName] = useState('');
   const [category, setCategory] = useState('');
   const [description, setDescription] = useState('');

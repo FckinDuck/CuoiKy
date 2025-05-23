@@ -32,3 +32,26 @@ const RADIUS = {
 };
 
 export { COLORS, FONT_SIZES, SPACING, RADIUS };
+
+export const themes = {
+  light: {
+    primary: '#FF6B00',
+    secondary: '#FFA500',
+    background: '#FFFFFF',
+    surface: '#F9F9F9',
+    text: '#222222',
+    subText: '#666666',
+    border: '#E0E0E0',
+    error: '#FF4D4D',
+  },
+  dark: {
+    primary: '#FF6B00',
+    secondary: '#FFA500',
+    background: '#121212',
+    surface: '#1E1E1E',
+    text: '#FFFFFF',
+    subText: '#AAAAAA',
+    border: '#333333',
+    error: '#FF4D4D',
+  },
+};

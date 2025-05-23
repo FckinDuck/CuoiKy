@@ -59,7 +59,7 @@ const HomeScreen = ({ navigation }) => {
         <FlatList
           data={foods}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={{ padding: SPACING.md }}
+          contentContainerStyle={{ padding: SPACING.md, paddingBottom: SPACING.xl }}
           renderItem={({ item }) => (
             <FoodCard
               food={item}

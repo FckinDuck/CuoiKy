@@ -15,9 +15,10 @@ import firestore from '@react-native-firebase/firestore';
 import { useAuth } from '../providers/AuthProvider';
 import { encode as btoa } from 'base-64';
 
+
 const CreateFoodScreen = ({ navigation }) => {
   const { user } = useAuth();
-
+  const { theme } = useTheme();
   const [name, setName] = useState('');
   const [category, setCategory] = useState('');
   const [description, setDescription] = useState('');
@@ -32,7 +33,7 @@ const CreateFoodScreen = ({ navigation }) => {
   };
 
   const handleSubmit = async () => {
-    if (!name || !category || !description || !price || !imageUri) {
+    if (!name || !category || !description || !price ) {
       Alert.alert('Lỗi', 'Vui lòng điền đầy đủ thông tin món ăn');
       return;
     }

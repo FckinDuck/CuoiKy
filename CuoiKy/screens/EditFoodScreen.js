@@ -16,10 +16,12 @@ import { canEditFood } from '../utils/permissions';
 import { useAuth } from '../providers/AuthProvider';
 import { useNavigation } from '@react-navigation/native';
 
+
 const EditFoodScreen = ({ route }) => {
   const { foodId } = route.params;
   const { user } = useAuth();
   const navigation = useNavigation();
+  const { theme } = useTheme();
 
   const [food, setFood] = useState(null);
   const [loading, setLoading] = useState(true);

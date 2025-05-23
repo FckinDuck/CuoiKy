@@ -1,17 +1,20 @@
 import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, ThemeProvider } from '@react-navigation/native';
 import { AuthProvider } from './providers/AuthProvider';
 import AppNavigator from './navigation/AppNavigator';
 import { MenuProvider } from 'react-native-popup-menu';
-// testcommit
+import { ThemeProvider as CustomThemeProvider } from './providers/ThemeProvider';
+
 const App = () => {
   return (
     <MenuProvider>
+    <CustomThemeProvider>
     <AuthProvider>
       <NavigationContainer>
         <AppNavigator />
       </NavigationContainer>
     </AuthProvider>
+    </CustomThemeProvider>
     </MenuProvider>
   );
 };

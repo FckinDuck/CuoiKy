@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -19,7 +19,29 @@ const SearchScreen = () => {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [sortKey, setSortKey] = useState('name');
+  const [sortOrder, setSortOrder] = useState('asc');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [tags, setTags] = useState([]);
+
   const navigation = useNavigation();
+
+  useEffect(() => {
+    const fetchTags = async () => {
+      try {
+        const snapshot = await firestore().collection('TAGS').get();
+        const tagList = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setTags(tagList);
+      } catch (error) {
+        console.error('Lỗi khi lấy TAGS:', error);
+      }
+    };
+
+    fetchTags();
+  }, []);
 
   const handleSearch = async (text) => {
     setQuery(text);
@@ -29,33 +51,48 @@ const SearchScreen = () => {
     }
 
     setLoading(true);
-
     try {
-      const snapshot = await firestore()
-        .collection('FOODS')
-        .orderBy('name')
-        .startAt(text)
-        .endAt(text + '\uf8ff')
-        .get();
+      const snapshot = await firestore().collection('FOODS').get();
+      const search = normalizeText(text);
 
-      const filtered = snapshot.docs
-        .map(doc => ({ id: doc.id, ...doc.data() })) // Include ID
+      let filtered = snapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
         .filter(food => {
-          const search = normalizeText(text);
-          return (
-            normalizeText(food.name).includes(search) ||
-            normalizeText(food.category).includes(search) ||
-            normalizeText(food.description).includes(search)
-          );
+          const name = normalizeText(food.name);
+          const desc = normalizeText(food.description);
+          const category = normalizeText(food.category);
+
+          const matchesSearch =
+            name.includes(search) ||
+            desc.includes(search) ||
+            category.includes(search);
+
+          const matchesCategory =
+            selectedCategory === 'all' ||
+            normalizeText(food.category) === normalizeText(selectedCategory);
+
+          return matchesSearch && matchesCategory;
         });
+
+      filtered.sort((a, b) => {
+        const aVal = a[sortKey] ?? 0;
+        const bVal = b[sortKey] ?? 0;
+        if (sortOrder === 'asc') return aVal > bVal ? 1 : -1;
+        else return aVal < bVal ? 1 : -1;
+      });
 
       setResults(filtered);
     } catch (error) {
-      console.error('Error searching FOODS:', error);
+      console.error('Lỗi tìm kiếm FOODS:', error);
     }
-
     setLoading(false);
   };
+
+  useEffect(() => {
+    if (query.trim()) {
+      handleSearch(query);
+    }
+  }, [selectedCategory, sortKey, sortOrder]);
 
   const renderItem = ({ item }) => (
     <TouchableOpacity
@@ -83,6 +120,38 @@ const SearchScreen = () => {
         value={query}
         onChangeText={handleSearch}
       />
+      
+      <View style={styles.filterRow}>
+        <Text style={styles.filterLabel}>Lọc:</Text>
+        <FlatList
+          horizontal
+          data={tags}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <TouchableOpacity style={styles.tagButton}>
+              <Text style={styles.tagText}>{item.name}</Text>
+            </TouchableOpacity>
+          )}
+          showsHorizontalScrollIndicator={false}
+        />
+      </View>
+
+      <View style={styles.sortRow}>
+        <Text style={styles.filterLabel}>Sắp xếp theo:</Text>
+        {['price', 'fame', 'rating'].map(key => (
+          <TouchableOpacity key={key} onPress={() => setSortKey(key)}>
+            <Text style={sortKey === key ? styles.activeFilter : styles.filterText}>{key}</Text>
+          </TouchableOpacity>
+        ))}
+        <TouchableOpacity onPress={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}>
+          <Icon
+            name={sortOrder === 'asc' ? 'arrow-up' : 'arrow-down'}
+            size={18}
+            color={COLORS.primary}
+            style={{ marginLeft: 8 }}
+          />
+        </TouchableOpacity>
+      </View>
 
       {loading ? (
         <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: SPACING.lg }} />
@@ -157,6 +226,50 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: FONT_SIZES.medium,
     color: COLORS.subText,
+  },
+  filterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    marginBottom: SPACING.sm,
+  },
+  sortRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    marginBottom: SPACING.md,
+  },
+  filterLabel: {
+    fontSize: FONT_SIZES.medium,
+    marginRight: SPACING.xs,
+    color: COLORS.text,
+    fontWeight: 'bold',
+  },
+  filterText: {
+    marginRight: SPACING.md,
+    fontSize: FONT_SIZES.small,
+    color: COLORS.subText,
+  },
+  activeFilter: {
+    marginRight: SPACING.md,
+    fontSize: FONT_SIZES.small,
+    color: COLORS.primary,
+    fontWeight: 'bold',
+  },
+
+  tagButton: {
+    backgroundColor: COLORS.surface,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+  },
+  tagText: {
+    fontSize: FONT_SIZES.small,
+    color: COLORS.primary,
+    fontWeight: '500',
   },
 });
 

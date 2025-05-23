@@ -93,22 +93,43 @@ const Comment = ({ comment }) => {
   const onDislike = () => handleDislike({ user, role: user.role, target: { id: comment.selfId, type: 'comment' } });
 
   const onSubmitReply = async () => {
-    if (!replyText.trim()) return;
-    const now = firestore.Timestamp.now();
-    await firestore().collection('COMMENT').add({
-      createAt: now,
-      lastUpdate: now,
-      descInfo: replyText,
-      fame: 0,
-      isHighlighted: false,
-      isReported: false,
-      selfId: `#${Date.now()}`,
-      targetId: comment.selfId,
-      email: user.email,
+  if (!replyText.trim()) return;
+
+  const encodedEmail = btoa(user.email).replace(/[^a-zA-Z0-9]/g, '');
+  const commentId = `${encodedEmail}_${Date.now()}`;
+  const now = firestore.Timestamp.now();
+
+  try {
+    await firestore().runTransaction(async (transaction) => {
+      const commentRef = firestore().collection('COMMENT').doc(commentId);
+      const foodRef = firestore().collection('FOODS').doc(comment.targetId);
+
+      transaction.set(commentRef, {
+        createAt: now,
+        lastUpdate: now,
+        descInfo: replyText.trim(),
+        fame: 0,
+        isHighlighted: false,
+        isReported: false,
+        selfId: commentId,
+        targetId: comment.selfId,
+        email: user.email,
+      });
+
+      const foodSnap = await transaction.get(foodRef);
+      const currentCount = foodSnap.exists ? (foodSnap.data().commentCount || 0) : 0;
+      transaction.update(foodRef, {
+        commentCount: currentCount + 1,
+      });
     });
+
     setReplyText('');
     setShowReplyInput(false);
-  };
+  } catch (error) {
+    console.error('Lỗi khi gửi phản hồi:', error);
+    Alert.alert('Lỗi', 'Không thể gửi phản hồi. Vui lòng thử lại.');
+  }
+};
 
   const handleEdit = async () => {
     await commentRef.update({
@@ -119,18 +140,27 @@ const Comment = ({ comment }) => {
   };
 
   const handleDelete = () => {
-    Alert.alert('Xác nhận', 'Bạn có chắc muốn xoá bình luận này?', [
-      { text: 'Huỷ', style: 'cancel' },
-      {
-        text: 'Xoá',
-        style: 'destructive',
-        onPress: async () => {
-          await commentRef.delete();
-          transaction.update(foodRef, {commentCount: currentCount - 1});
-        },
+  Alert.alert('Xác nhận', 'Bạn có chắc muốn xoá bình luận này?', [
+    { text: 'Huỷ', style: 'cancel' },
+    {
+      text: 'Xoá',
+      style: 'destructive',
+      onPress: async () => {
+        try {
+          await firestore().runTransaction(async (transaction) => {
+            const foodSnap = await transaction.get(foodRef);
+            const currentCount = foodSnap.exists ? (foodSnap.data().commentCount || 0) : 0;
+            transaction.delete(commentRef);
+            transaction.update(foodRef, { commentCount: Math.max(currentCount - 1, 0) });
+          });
+        } catch (error) {
+          console.error('Lỗi khi xoá comment:', error);
+          Alert.alert('Lỗi', 'Không thể xoá bình luận.');
+        }
       },
-    ]);
-  };
+    },
+  ]);
+};
 
   const handleReport = () => {
     Alert.alert('Báo cáo', 'Bạn muốn báo cáo bình luận này?', [

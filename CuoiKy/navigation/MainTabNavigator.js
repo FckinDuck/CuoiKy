@@ -28,7 +28,7 @@ function HomeStack() {
     <Stack.Navigator>
       <Stack.Screen name="Home" component={HomeScreen} />
       <Stack.Screen name="Detail" component={DetailScreen} />
-      <Stack.Screen name="EditFood" component={EditFoodScreen} options={{ title: 'Chỉnh sửa món' }} />
+      <Stack.Screen name="EditFood" component={EditFoodScreen} options={{ title: 'Edit' }} />
     </Stack.Navigator>
   );
 }
@@ -37,7 +37,7 @@ function SearchStack() {
     <Stack.Navigator>
       <Stack.Screen name="Search" component={SearchScreen} />
       <Stack.Screen name="Detail" component={DetailScreen} />
-      <Stack.Screen name="EditFood" component={EditFoodScreen} options={{ title: 'Chỉnh sửa món' }} />
+      <Stack.Screen name="EditFood" component={EditFoodScreen} options={{ title: 'Edit' }} />
     </Stack.Navigator>
   );
 }
@@ -46,7 +46,7 @@ function FavoriteStack() {
     <Stack.Navigator>
       <Stack.Screen name="Favorite" component={FavoriteScreen} />
       <Stack.Screen name="Detail" component={DetailScreen}  />
-      <Stack.Screen name="EditFood" component={EditFoodScreen} options={{ title: 'Chỉnh sửa món' }} />
+      <Stack.Screen name="EditFood" component={EditFoodScreen} options={{ title: 'Edit' }} />
     </Stack.Navigator>
   );
 }
